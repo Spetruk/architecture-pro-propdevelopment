@@ -8,5 +8,5 @@ rules:
         resources: ["pods", "secrets", "configmaps", "serviceaccounts", "roles", "rolebindings"]
   - level: Metadata
     resources:
-      - group: "*"
+      - group: ""
         resources: ["*"]
