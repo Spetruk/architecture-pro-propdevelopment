@@ -1,0 +1,25 @@
+# Task 7: Kubernetes Security Audit - Инструкция для проверяющего
+
+## Обзор задания
+
+Это задание демонстрирует настройку и использование механизмов безопасности Kubernetes:
+- PodSecurity Admission Controller
+- OPA Gatekeeper с custom политиками
+- Аудит безопасности контейнеров
+
+## Быстрая проверка
+
+### 1. Установка компонентов
+
+```bash
+# Создать namespace с PodSecurity
+kubectl apply -f 01-create-namespace.yaml
+
+# Установить OPA Gatekeeper (если не установлен)
+kubectl apply -f https://raw.githubusercontent.com/open-policy-agent/gatekeeper/release-3.14/deploy/gatekeeper.yaml
+
+# Применить constraint templates
+kubectl apply -f gatekeeper/constraint-templates/
+
+# Применить constraints
+kubectl apply -f gatekeeper/constraints/
