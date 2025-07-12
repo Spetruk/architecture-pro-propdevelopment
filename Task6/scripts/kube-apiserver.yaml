@@ -16,6 +16,7 @@ spec:
         - --advertise-address=192.168.49.2
         - --audit-policy-file=/etc/kubernetes/audit-policy.yaml
         - --audit-log-path=/var/log/audit.log
+        - --audit-log-format=json
         - --allow-privileged=true
         - --authorization-mode=Node,RBAC
         - --client-ca-file=/var/lib/minikube/certs/ca.crt

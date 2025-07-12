@@ -3,42 +3,27 @@
 ## Подозрительные события
 
 1. Доступ к секретам:
-   Кто:
-
-Пользователь: kubernetes-admin
-Группы: kubeadm:cluster-admins, system:authenticated
-Тип аутентификации: X.509 сертификат (SHA256: ac22b76838f15431da2040c6d1a755d37fac819aefb95220ad2daed9d0ecf102)
-
-Где:
-
-Namespace: kube-system
-Ресурс: secrets/bootstrap-token-8enefs
-Источник запроса: IP 192.168.49.2
-User Agent: kubeadm/v1.33.1 (linux/amd64) kubernetes/8adc0f0
-
-Почему подозрительно:
-
-Попытка доступа к bootstrap-токену в системном пространстве имен
-Bootstrap-токены используются для первоначальной настройки кластера и содержат привилегированные данные
-Доступ к таким токенам может позволить создание новых узлов или получение административных привилегий
-Хотя запрос не удался (404 Not Found), сама попытка доступа может указывать на разведывательную активность
+- Кто: minikube-user выдает себя за system:serviceaccount:secure-ops:monitoring
+- Где: /api/v1/namespaces/kube-system/secrets
+- Почему подозрительно: Попытка обойти ограничения доступа через impersonation (заблокировано с кодом 403)
 
 2. Привилегированные поды:
-    - Кто: ...
-    - Комментарий: ...
+- Кто: minikube-user
+- Комментарий: Создан под "privileged-pod" с контейнером "pwn" и флагом privileged:true в namespace secure-ops. Под получил полные права root на хосте, включая доступ к службам и ресурсам узла кластера. Автоматически смонтирован service account token для дальнейших атак через Kubernetes API.
 
 3. Использование kubectl exec в чужом поде:
-    - Кто: ...
-    - Что делал: ...
+- Кто: minikube-user (по паттерну атакующего скрипта)
+- Что делал: Попытка выполнения команды `cat /etc/resolv.conf` в системном поде CoreDNS
+- Результат: **Неудачно** - "exec failed: unable to start container process: exec: "cat": executable file not found in $PATH"
+- Комментарий: Атака заблокирована на уровне контейнера из-за отсутствия утилит в минималистичном образе CoreDNS. Это пример того, как distroless/minimal образы повышают безопасность, ограничивая доступные инструменты для атакующих. Однако сама попытка exec в системном поде остается серьезным нарушением безопасности.
 
 4. Создание RoleBinding с правами cluster-admin:
-    - Кто: ...
-    - К чему привело: ...
+- Кто: minikube-user
+- К чему привело: После выполнения команды `rolebinding.rbac.authorization.k8s.io/escalate-binding created` атакующий получил полные права cluster-admin для service account `system:serviceaccount:secure-ops:monitoring`. Это означает полную компрометацию кластера - теперь любые операции могут выполняться от имени этого service account без ограничений, включая доступ ко всем секретам, создание/удаление любых ресурсов, и полное управление RBAC правами в кластере.
+- Комментарий: **КРИТИЧЕСКАЯ ЭСКАЛАЦИЯ ПРИВИЛЕГИЙ** - атакующий превратил ограниченный service account в аккаунт с правами суперпользователя, что делает весь кластер Kubernetes полностью скомпрометированным.
+- Примечание: Событие создания RoleBinding не видно в предоставленных audit логах, но по выводу sh simulate-script.sh видно, что операция была успешно выполнена (rolebinding.rbac.authorization.k8s.io/escalate-binding created).
 
 5. Удаление audit-policy.yaml:
-    - Кто: ...
-    - Возможные последствия: ...
-
-## Вывод
-
-...
+   - Кто: --as=admin
+   - Возможные последствия: Подчистит за собой следы, но ничего не вышло
+   - Комментарий: audit-policy.yaml содержит конфигурацию аудита, а не Kubernetes ресурсы, вот результат sh simulate-incedent.sh error: resource mapping not found for name: "" namespace: "" from "/etc/kubernetes/audit-policy.yaml": no matches for kind "Policy" in version "audit.k8s.io/v1"
