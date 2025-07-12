@@ -1,0 +1,25 @@
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+  # Log security policy violations
+  - level: Metadata
+    namespaces: ["audit-zone"]
+    resources:
+      - group: ""
+        resources: ["pods"]
+    omitStages:
+      - RequestReceived
+
+  # Log Gatekeeper constraint violations
+  - level: Request
+    resources:
+      - group: "constraints.gatekeeper.sh"
+        resources: ["*"]
+    omitStages:
+      - RequestReceived
+
+  # Log admission controller decisions
+  - level: Request
+    users: ["system:serviceaccount:gatekeeper-system:gatekeeper-admin"]
+    omitStages:
+      - RequestReceived

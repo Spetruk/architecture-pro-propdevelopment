@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-hostpath
+  namespace: audit-zone
+  labels:
+    app: insecure-hostpath
+spec:
+  containers:
+    - name: nginx
+      image: nginx:1.21
+      securityContext:
+        runAsUser: 0
+      volumeMounts:
+        - name: host-volume
+          mountPath: /host
+      ports:
+        - containerPort: 80
+  volumes:
+    - name: host-volume
+      hostPath:
+        path: /var/lib/docker
+        type: Directory
